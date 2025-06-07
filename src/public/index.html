@@ -1,0 +1,43 @@
+<!-- filepath: c:\Users\Hitesh\hiteshk283\src\public\index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ice Cream Parlour</title>
+    <style>
+        .flavor {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin: 10px;
+            display: inline-block;
+            text-align: center;
+        }
+        .flavor img {
+            width: 150px;
+            height: 150px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Ice Cream Flavors</h1>
+    <div id="flavors"></div>
+    <script>
+        fetch('http://localhost:3000/flavors')
+            .then(response => response.json())
+            .then(flavors => {
+                const flavorsDiv = document.getElementById('flavors');
+                flavors.forEach(flavor => {
+                    const flavorDiv = document.createElement('div');
+                    flavorDiv.className = 'flavor';
+                    flavorDiv.innerHTML = `
+                        <img src="${flavor.image}" alt="${flavor.name}">
+                        <h2>${flavor.name}</h2>
+                        <p>Price: $${flavor.price}</p>
+                    `;
+                    flavorsDiv.appendChild(flavorDiv);
+                });
+            });
+    </script>
+</body>
+</html>

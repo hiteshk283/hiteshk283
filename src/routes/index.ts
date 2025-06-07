@@ -1,7 +1,7 @@
-import { Router } from 'express';
+import express, { Router } from 'express';
 import { IndexController } from '../controllers/index';
 
-const router = Router();
+const router = express.Router();
 const indexController: IIndexController = new IndexController();
 
 interface App {
@@ -9,11 +9,22 @@ interface App {
 }
 
 interface IIndexController {
-    getFlavors(req: Express.Request, res: Express.Response): void;
-    getOrders(req: Express.Request, res: Express.Response): void;
+    getFlavors(req: express.Request, res: express.Response): void;
+    getOrders(req: express.Request, res: express.Response): void;
 }
 
 export function setRoutes(app: App): void {
-    app.use('/flavors', router.get('/', indexController.getFlavors.bind(indexController)));
-    app.use('/orders', router.get('/', indexController.getOrders.bind(indexController)));
+    // Define routes for flavors and orders
+    router.get('/flavors', indexController.getFlavors.bind(indexController));
+    router.get('/orders', indexController.getOrders.bind(indexController));
+
+    // Attach the router to the app
+    app.use('/', router);
 }
+
+// Default route
+router.get('/', (req, res) => {
+    res.send('Welcome to the Ice Cream Parlour!');
+});
+
+export default router;
