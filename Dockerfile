@@ -1,11 +1,14 @@
-FROM node:latest
+FROM node:18
 
 WORKDIR /app
 
+COPY package*.json ./
+RUN npm ci
+
 COPY . .
 
-RUN npm ci
+RUN npm run build
 
 EXPOSE 3000
 
-CMD [ "node", "src/app.ts" ]
+CMD [ "node", "dist/app.js" ]
