@@ -52,7 +52,7 @@ To start the application, run the following command:
 npm start
 ```
 
-The application will be running on `http://localhost:3000`.
+The application will be running on `http://localhost:3000` and we can use any of the local host as per the requirement.
 
 ## Contributing
 
