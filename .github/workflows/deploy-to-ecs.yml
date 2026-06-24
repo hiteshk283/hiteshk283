@@ -10,7 +10,7 @@ on:
 env:
   AWS_REGION: us-east-1                           # Ensure this matches the region you created resources in
   ECR_REPOSITORY: control-center-backend          # Your Amazon ECR repository name
-  ECS_SERVICE: control-center-backend-service     # Your Amazon ECS service name
+  ECS_SERVICE: control-center-backend-task-service-ijzgktuo     # Your Amazon ECS service name
   ECS_CLUSTER: control-center-cluster             # Your Amazon ECS cluster name
   ECS_TASK_DEFINITION_FAMILY: control-center-backend-task # Name of your task definition family
   CONTAINER_NAME: backend-container               # Name of the container in the task definition
