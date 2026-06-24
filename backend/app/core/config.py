@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     app_name: str = "Control Center"
     environment: str = "development"
-    database_url: str = "sqlite+aiosqlite:///./control_center.db"
+    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/control_center"
     jwt_secret_key: str = "REPLACE_WITH_SECRET"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
