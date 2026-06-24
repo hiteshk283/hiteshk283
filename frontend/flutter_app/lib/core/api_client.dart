@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ApiClient {
-  static const String baseUrl = 'http://localhost:8000'; // For emulators use 10.0.2.2
+  static const String baseUrl = 'http://ecs-backend-alb-1078780310.us-east-1.elb.amazonaws.com'; // ECS ALB URL
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   Future<Map<String, String>> _getHeaders() async {
