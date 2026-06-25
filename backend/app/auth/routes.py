@@ -16,6 +16,9 @@ from app.schemas.auth import Token, RefreshTokenRequest
 from app.auth.security import get_password_hash, verify_password, create_access_token, create_refresh_token
 from app.auth.dependencies import get_current_user
 
+from app.models.link_code import LinkCode
+from app.models.connection import Connection
+
 router = APIRouter()
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -28,6 +31,16 @@ async def register(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
     if result.scalars().first():
         raise HTTPException(status_code=400, detail="Username already registered")
         
+    # Validate link_code if provided
+    link_code_obj = None
+    if user_in.link_code:
+        result = await db.execute(select(LinkCode).where(LinkCode.code == user_in.link_code))
+        link_code_obj = result.scalars().first()
+        if not link_code_obj:
+            raise HTTPException(status_code=400, detail="Invalid link code")
+        if link_code_obj.is_used:
+            raise HTTPException(status_code=400, detail="Link code has already been used")
+        
     new_user = User(
         email=user_in.email,
         username=user_in.username,
@@ -35,6 +48,18 @@ async def register(user_in: UserCreate, db: AsyncSession = Depends(get_db)):
     )
     db.add(new_user)
     await db.flush() # flush to get new_user.id
+    
+    # Process link code connection
+    if link_code_obj:
+        link_code_obj.is_used = True
+        link_code_obj.used_by_id = new_user.id
+        
+        new_connection = Connection(
+            user1_id=link_code_obj.creator_id,
+            user2_id=new_user.id,
+            status="active"
+        )
+        db.add(new_connection)
     
     # Audit log
     audit = AuditLog(user_id=new_user.id, action="user_registration")

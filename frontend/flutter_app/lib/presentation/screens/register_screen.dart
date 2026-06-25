@@ -14,6 +14,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _linkCodeController = TextEditingController();
   bool _isLoading = false;
 
   void _register() async {
@@ -22,6 +23,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _emailController.text,
       _usernameController.text,
       _passwordController.text,
+      _linkCodeController.text.trim()
     );
     setState(() => _isLoading = false);
 
@@ -66,6 +68,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 controller: _passwordController,
                 obscureText: true,
                 decoration: const InputDecoration(labelText: 'Password', prefixIcon: Icon(Icons.lock)),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _linkCodeController,
+                decoration: const InputDecoration(labelText: 'Invite Code (Optional)', prefixIcon: Icon(Icons.group_add)),
               ),
               const SizedBox(height: 24),
               SizedBox(
