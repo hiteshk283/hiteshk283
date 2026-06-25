@@ -1,0 +1,88 @@
+name: Deploy and Build Frontend
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/deploy-frontend.yml'
+  workflow_dispatch: # Allows manual trigger
+
+env:
+  AWS_REGION: us-east-1 # Using the same region as your ECS backend
+  S3_BUCKET: control-center-frontend-hiteshk283
+  CLOUDFRONT_DIST_ID: E2ALGJR4OOW90A
+
+jobs:
+  build-and-deploy-web:
+    name: Build & Deploy Web
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0' # Use a stable version, adjust if needed
+          channel: 'stable'
+
+      - name: Install dependencies
+        working-directory: ./frontend/flutter_app
+        run: flutter pub get
+
+      - name: Build Web App
+        working-directory: ./frontend/flutter_app
+        run: flutter build web --release
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy to S3
+        working-directory: ./frontend/flutter_app
+        run: |
+          aws s3 sync build/web s3://${{ env.S3_BUCKET }} --delete
+
+      - name: Invalidate CloudFront Cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ env.CLOUDFRONT_DIST_ID }} \
+            --paths "/*"
+
+  build-android-apk:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
+
+      - name: Install dependencies
+        working-directory: ./frontend/flutter_app
+        run: flutter pub get
+
+      - name: Build APK
+        working-directory: ./frontend/flutter_app
+        run: flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: control-center-apk
+          path: frontend/flutter_app/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 7
