@@ -3,7 +3,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class WebSocketClient {
-  static const String wsUrl = 'ws://localhost:8000/ws';
+  static const String wsUrl = 'ws://ecs-backend-alb-1078780310.us-east-1.elb.amazonaws.com/ws';
   WebSocketChannel? _channel;
   final _messageController = StreamController<String>.broadcast();
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
