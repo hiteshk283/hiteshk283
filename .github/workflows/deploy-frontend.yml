@@ -1,11 +1,6 @@
 name: Deploy and Build Frontend
 
 on:
-  push:
-    branches: [ "main" ]
-    paths:
-      - 'frontend/**'
-      - '.github/workflows/deploy-frontend.yml'
   workflow_dispatch: # Allows manual trigger
 
 env:
