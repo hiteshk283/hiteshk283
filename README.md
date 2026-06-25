@@ -17,6 +17,4 @@ Control Center is a secure messaging and command platform foundation built for e
 - `scripts/` - local and deployment script stubs
 - `docs/` - architecture, API, deployment, and diagrams documentation
 
-## Getting Started
 
-This phase provides scaffolding only. No business logic or feature implementation is included yet.
