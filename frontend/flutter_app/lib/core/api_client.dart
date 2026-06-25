@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ApiClient {
-  static const String baseUrl = 'http://ecs-backend-alb-1078780310.us-east-1.elb.amazonaws.com'; // ECS ALB URL
+  static const String baseUrl = 'https://d1w8csqzvughb4.cloudfront.net'; // CloudFront CDN URL
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   Future<Map<String, String>> _getHeaders() async {
