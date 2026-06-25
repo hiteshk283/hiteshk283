@@ -24,7 +24,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0' # Use a stable version, adjust if needed
+          flutter-version: '3.44.3' # Match the local stable version
           channel: 'stable'
 
       - name: Install dependencies
@@ -69,7 +69,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0'
+          flutter-version: '3.44.3'
           channel: 'stable'
 
       - name: Install dependencies
