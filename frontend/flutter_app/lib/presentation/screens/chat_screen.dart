@@ -30,8 +30,12 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _send() {
     if (_textController.text.trim().isNotEmpty) {
-      context.read<ChatProvider>().sendMessage(_textController.text.trim());
-      _textController.clear();
+      final text = _textController.text.trim();
+      final authId = context.read<AuthProvider>().userId;
+      if (authId != null) {
+        context.read<ChatProvider>().sendOptimisticMessage(text, authId);
+        _textController.clear();
+      }
     }
   }
 

@@ -35,10 +35,8 @@ class ChatProvider with ChangeNotifier {
           
           bool isForCurrentChat = false;
           if (_currentReceiverId == null) {
-            // Global chat context
             if (newMsg.receiverId == null) isForCurrentChat = true;
           } else {
-            // Private chat context
             if (newMsg.receiverId != null) {
                if (newMsg.senderId == _currentReceiverId || newMsg.receiverId == _currentReceiverId) {
                   isForCurrentChat = true;
@@ -47,7 +45,13 @@ class ChatProvider with ChangeNotifier {
           }
 
           if (isForCurrentChat) {
-            _messages.insert(0, newMsg); // Add to top
+            // Deduplicate: Check if we have an optimistic message with same text
+            final tempIndex = _messages.indexWhere((m) => m.id.startsWith('temp_') && m.messageText == newMsg.messageText);
+            if (tempIndex != -1) {
+              _messages[tempIndex] = newMsg; // Replace temp message with real one
+            } else {
+              _messages.insert(0, newMsg); // Add new message to top
+            }
             notifyListeners();
           }
         }
@@ -80,7 +84,19 @@ class ChatProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> sendMessage(String text) async {
+  Future<bool> sendOptimisticMessage(String text, String currentUserId) async {
+    // 1. Optimistic UI Update - show instantly!
+    final tempMsg = Message(
+      id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
+      senderId: currentUserId,
+      receiverId: _currentReceiverId,
+      messageText: text,
+      createdAt: DateTime.now(),
+    );
+    _messages.insert(0, tempMsg);
+    notifyListeners();
+
+    // 2. Send to backend
     try {
       final body = <String, dynamic>{
         'message_text': text,
@@ -89,8 +105,17 @@ class ChatProvider with ChangeNotifier {
         body['receiver_id'] = _currentReceiverId;
       }
       final response = await _apiClient.post('/api/messages/', body);
-      return response.statusCode == 201;
+      if (response.statusCode != 201) {
+         // Revert on failure
+         _messages.removeWhere((m) => m.id == tempMsg.id);
+         notifyListeners();
+         return false;
+      }
+      return true;
     } catch (e) {
+      // Revert on failure
+      _messages.removeWhere((m) => m.id == tempMsg.id);
+      notifyListeners();
       return false;
     }
   }

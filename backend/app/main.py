@@ -16,6 +16,7 @@ from app.websocket.routes import router as ws_router
 from app.api.messages import router as messages_router
 from app.api.notifications import router as notifications_router
 from app.api.users import router as users_router
+from app.api.connections import router as connections_router
 
 
 @asynccontextmanager
@@ -43,6 +44,7 @@ app.include_router(auth_router, prefix="/auth", tags=["auth"])
 app.include_router(messages_router, prefix="/api/messages", tags=["messages"])
 app.include_router(notifications_router, prefix="/api/notifications", tags=["notifications"])
 app.include_router(users_router, prefix="/api/users", tags=["users"])
+app.include_router(connections_router, prefix="/api/connections", tags=["connections"])
 app.include_router(ws_router, tags=["websocket"])
 
 @app.get("/")

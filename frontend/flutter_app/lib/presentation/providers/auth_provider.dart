@@ -64,14 +64,31 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> register(String email, String username, String password) async {
+  Future<bool> register(String email, String username, String password, [String? linkCode]) async {
     try {
-      final response = await _apiClient.post('/auth/register', {
+      final body = {
         'email': email,
         'username': username,
         'password': password,
-      });
+      };
+      if (linkCode != null && linkCode.isNotEmpty) {
+        body['link_code'] = linkCode;
+      }
+      final response = await _apiClient.post('/auth/register', body);
       return response.statusCode == 201;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> deleteAccount() async {
+    try {
+      final response = await _apiClient.delete('/api/users/me');
+      if (response.statusCode == 200) {
+        await logout();
+        return true;
+      }
+      return false;
     } catch (e) {
       return false;
     }
