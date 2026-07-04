@@ -11,7 +11,7 @@ from app.models.connection import Connection
 from app.models.audit_log import AuditLog
 from app.models.session import Session
 from app.schemas.user import UserResponse
-from app.auth.dependencies import get_current_user
+from app.auth.dependencies import get_current_user, get_admin_user
 
 router = APIRouter()
 
@@ -75,3 +75,29 @@ async def delete_my_account(db: AsyncSession = Depends(get_db), current_user: Us
     
     await db.commit()
     return {"msg": "Account successfully deleted"}
+
+@router.get("/admin/all", response_model=List[UserResponse])
+async def get_all_users_admin(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_admin_user)):
+    """Admin only: Get all users in the system."""
+    result = await db.execute(select(User))
+    return result.scalars().all()
+
+@router.delete("/admin/{user_id}", status_code=status.HTTP_200_OK)
+async def delete_user_admin(user_id: uuid.UUID, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_admin_user)):
+    """Admin only: Delete a user by ID."""
+    result = await db.execute(select(User).where(User.id == user_id))
+    user_to_delete = result.scalars().first()
+    
+    if not user_to_delete:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        
+    from sqlalchemy import delete
+    await db.execute(delete(User).where(User.id == user_id))
+    
+    # Audit log
+    audit = AuditLog(user_id=current_user.id, action=f"admin_deleted_user_{user_id}")
+    db.add(audit)
+    
+    await db.commit()
+    return {"msg": "User deleted by admin"}
