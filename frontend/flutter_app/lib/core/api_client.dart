@@ -16,7 +16,13 @@ class ApiClient {
 
   Future<http.Response> get(String endpoint) async {
     final headers = await _getHeaders();
-    return await http.get(Uri.parse('$baseUrl$endpoint'), headers: headers);
+    
+    // Add a cache buster timestamp to prevent CloudFront from caching API responses
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final separator = endpoint.contains('?') ? '&' : '?';
+    final url = '$baseUrl$endpoint${separator}_t=$timestamp';
+    
+    return await http.get(Uri.parse(url), headers: headers);
   }
 
   Future<http.Response> post(String endpoint, Map<String, dynamic> body) async {
