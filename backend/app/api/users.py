@@ -39,11 +39,14 @@ async def get_users(db: AsyncSession = Depends(get_db), current_user: User = Dep
         else:
             connected_user_ids.append(c.user1_id)
             
-    # Fetch those users
+    # Fetch those users plus AI users
     user_query = select(User).where(
-        and_(
-            User.id.in_(connected_user_ids),
-            User.is_active == True
+        or_(
+            and_(
+                User.id.in_(connected_user_ids),
+                User.is_active == True
+            ),
+            User.is_ai == True
         )
     )
     user_result = await db.execute(user_query)

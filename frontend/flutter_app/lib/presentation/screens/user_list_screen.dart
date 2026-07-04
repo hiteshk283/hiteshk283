@@ -128,17 +128,25 @@ class _UserListScreenState extends State<UserListScreen> {
             );
           }
 
+          final allUsersList = [
+            ...otherUsers.where((u) => u.isAi),
+            ...otherUsers.where((u) => !u.isAi),
+          ];
+
           return ListView.builder(
-            itemCount: otherUsers.length,
+            itemCount: allUsersList.length,
             itemBuilder: (context, index) {
-              final user = otherUsers[index];
+              final user = allUsersList[index];
               return ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: const Color(0xFF6C63FF),
-                  child: Text(user.username.substring(0, 1).toUpperCase(), style: const TextStyle(color: Colors.white)),
+                  backgroundColor: user.isAi ? Colors.teal : const Color(0xFF6C63FF),
+                  child: user.isAi
+                      ? const Icon(Icons.smart_toy, color: Colors.white)
+                      : Text(user.username.substring(0, 1).toUpperCase(), style: const TextStyle(color: Colors.white)),
                 ),
                 title: Text(user.username, style: const TextStyle(fontWeight: FontWeight.bold)),
-                trailing: PopupMenuButton<String>(
+                subtitle: user.isAi ? const Text('AI Assistant', style: TextStyle(color: Colors.teal)) : null,
+                trailing: user.isAi ? null : PopupMenuButton<String>(
                   onSelected: (value) async {
                     if (value == 'block') {
                       final success = await userProvider.blockUser(user.id);
