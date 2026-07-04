@@ -1,12 +1,14 @@
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from app.core.config import settings
 import logging
 
 logger = logging.getLogger(__name__)
 
-# Initialize Gemini if key is provided
+# Initialize Gemini client if key is provided
+client = None
 if settings.gemini_api_key:
-    genai.configure(api_key=settings.gemini_api_key)
+    client = genai.Client(api_key=settings.gemini_api_key)
 else:
     logger.warning("GEMINI_API_KEY is not set. AI agents will return placeholder responses.")
 
@@ -20,21 +22,19 @@ AI_PERSONAS = {
 
 async def generate_ai_response(agent_username: str, user_message: str) -> str:
     """Generate a response using Gemini based on the agent's persona."""
-    if not settings.gemini_api_key:
+    if not settings.gemini_api_key or not client:
         return f"Hello! I am {agent_username}. My AI capabilities are currently offline because the GEMINI_API_KEY is missing."
 
     system_instruction = AI_PERSONAS.get(agent_username, "You are a helpful AI assistant.")
     
     try:
-        # Use gemini-1.5-flash as it is fast and has a good free tier
-        model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash-latest",
-            system_instruction=system_instruction
+        response = await client.aio.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=user_message,
+            config=types.GenerateContentConfig(
+                system_instruction=system_instruction
+            )
         )
-        
-        # Note: Depending on the generativeai version, generating a response is synchronous.
-        # Running it in an executor would be better for a production FastAPI app, but for now we'll call it directly.
-        response = model.generate_content(user_message)
         return response.text
     except Exception as e:
         logger.error(f"Error generating AI response: {e}")
