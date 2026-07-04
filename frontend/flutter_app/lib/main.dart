@@ -110,7 +110,7 @@ class _ControlCenterAppState extends State<ControlCenterApp> {
               final isAuthRoute = state.uri.path == '/login' || state.uri.path == '/register';
 
               if (!loggedIn && !isAuthRoute) return '/login';
-              if (loggedIn && isAuthRoute) return '/chat';
+              if (loggedIn && (isAuthRoute || state.uri.path == '/')) return '/chat';
               return null;
             },
           );
