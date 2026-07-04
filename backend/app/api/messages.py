@@ -105,33 +105,51 @@ async def send_message(
         
     if is_ai_message:
         async def process_ai_reply(ai_user: User, human_user: User, user_text: str):
-            from app.services.ai_agent_service import generate_ai_response
+            from app.services.ai_agent_service import generate_ai_response_stream
             from app.core.database import AsyncSessionLocal
+            import uuid
             
-            ai_reply_text = await generate_ai_response(ai_user.username, user_text)
+            ai_message_id = uuid.uuid4()
+            accumulated_text = ""
+            
+            async for chunk in generate_ai_response_stream(ai_user.username, user_text):
+                accumulated_text += chunk
+                
+                ai_msg_data = {
+                    "type": "message_chunk",
+                    "data": {
+                        "id": str(ai_message_id),
+                        "sender_id": str(ai_user.id),
+                        "receiver_id": str(human_user.id),
+                        "message_text": chunk,
+                        "done": False
+                    }
+                }
+                await manager.send_personal_message(json.dumps(ai_msg_data), human_user.id)
             
             async with AsyncSessionLocal() as session:
                 ai_message = Message(
+                    id=ai_message_id,
                     sender_id=ai_user.id,
                     receiver_id=human_user.id,
-                    message_text=ai_reply_text
+                    message_text=accumulated_text
                 )
                 session.add(ai_message)
                 await session.commit()
                 await session.refresh(ai_message)
                 
-                ai_msg_data = {
-                    "type": "new_message",
+                done_msg_data = {
+                    "type": "message_chunk",
                     "data": {
                         "id": str(ai_message.id),
                         "sender_id": str(ai_message.sender_id),
                         "receiver_id": str(ai_message.receiver_id),
-                        "message_text": ai_message.message_text,
+                        "message_text": "",
+                        "done": True,
                         "created_at": ai_message.created_at.isoformat()
                     }
                 }
-                ai_msg_json = json.dumps(ai_msg_data)
-                await manager.send_personal_message(ai_msg_json, human_user.id)
+                await manager.send_personal_message(json.dumps(done_msg_data), human_user.id)
                 
         background_tasks.add_task(process_ai_reply, receiver, current_user, msg_in.message_text)
     
