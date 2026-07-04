@@ -14,8 +14,8 @@ class UserCreate(UserBase):
 class UserResponse(UserBase):
     id: UUID
     is_active: bool
-    is_ai: bool = False
-    is_admin: bool = False
+    is_ai: Optional[bool] = False
+    is_admin: Optional[bool] = False
     created_at: datetime
     updated_at: datetime
 
