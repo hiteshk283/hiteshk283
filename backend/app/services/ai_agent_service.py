@@ -28,7 +28,7 @@ async def generate_ai_response(agent_username: str, user_message: str) -> str:
     try:
         # Use gemini-1.5-flash as it is fast and has a good free tier
         model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
+            model_name="gemini-1.5-flash-latest",
             system_instruction=system_instruction
         )
         
