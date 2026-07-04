@@ -29,9 +29,6 @@ async def get_users(db: AsyncSession = Depends(get_db), current_user: User = Dep
     conn_result = await db.execute(conn_query)
     connections = conn_result.scalars().all()
     
-    if not connections:
-        return []
-        
     connected_user_ids = []
     for c in connections:
         if c.user1_id == current_user.id:
@@ -40,15 +37,19 @@ async def get_users(db: AsyncSession = Depends(get_db), current_user: User = Dep
             connected_user_ids.append(c.user1_id)
             
     # Fetch those users plus AI users
-    user_query = select(User).where(
-        or_(
-            and_(
-                User.id.in_(connected_user_ids),
-                User.is_active == True
-            ),
-            User.is_ai == True
+    if connected_user_ids:
+        user_query = select(User).where(
+            or_(
+                and_(
+                    User.id.in_(connected_user_ids),
+                    User.is_active == True
+                ),
+                User.is_ai == True
+            )
         )
-    )
+    else:
+        user_query = select(User).where(User.is_ai == True)
+        
     user_result = await db.execute(user_query)
     users = user_result.scalars().all()
     
