@@ -8,8 +8,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.core.database import engine
+from app.core.database import engine, AsyncSessionLocal
 from app.models.base import Base
+from app.models.user import User
+from app.services.ai_agent_service import AI_PERSONAS
+from sqlalchemy.future import select
 
 from app.auth.routes import router as auth_router
 from app.websocket.routes import router as ws_router
@@ -24,6 +27,23 @@ async def lifespan(app: FastAPI):
     # Create all tables on startup
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        
+    # Seed AI users
+    async with AsyncSessionLocal() as db:
+        for ai_name in AI_PERSONAS.keys():
+            result = await db.execute(select(User).where(User.username == ai_name))
+            existing_ai = result.scalars().first()
+            if not existing_ai:
+                ai_user = User(
+                    email=f"{ai_name.lower().replace(' ', '_')}@system.local",
+                    username=ai_name,
+                    password_hash="SYSTEM_NO_LOGIN",
+                    is_active=True,
+                    is_ai=True
+                )
+                db.add(ai_user)
+        await db.commit()
+        
     yield
     # Could clean up connections here if needed
 

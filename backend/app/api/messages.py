@@ -1,7 +1,7 @@
 import json
 from typing import List, Optional
 from uuid import UUID
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, status, HTTPException, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import desc, or_, and_
@@ -39,25 +39,38 @@ async def get_messages(
     return messages[::-1]
 
 @router.post("/", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
-async def send_message(msg_in: MessageCreate, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+async def send_message(
+    msg_in: MessageCreate, 
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
     if not msg_in.receiver_id:
         raise HTTPException(status_code=400, detail="Global chat is disabled. receiver_id is required.")
         
-    # Check if they are connected and not blocked
-    conn_result = await db.execute(
-        select(Connection).where(
-            or_(
-                and_(Connection.user1_id == current_user.id, Connection.user2_id == msg_in.receiver_id),
-                and_(Connection.user1_id == msg_in.receiver_id, Connection.user2_id == current_user.id)
+    receiver_result = await db.execute(select(User).where(User.id == msg_in.receiver_id))
+    receiver = receiver_result.scalars().first()
+    if not receiver:
+        raise HTTPException(status_code=404, detail="Receiver not found.")
+        
+    is_ai_message = getattr(receiver, 'is_ai', False)
+
+    if not is_ai_message:
+        # Check if they are connected and not blocked
+        conn_result = await db.execute(
+            select(Connection).where(
+                or_(
+                    and_(Connection.user1_id == current_user.id, Connection.user2_id == msg_in.receiver_id),
+                    and_(Connection.user1_id == msg_in.receiver_id, Connection.user2_id == current_user.id)
+                )
             )
         )
-    )
-    connection = conn_result.scalars().first()
-    if not connection:
-        raise HTTPException(status_code=403, detail="You are not connected to this user.")
-        
-    if connection.status != "active":
-        raise HTTPException(status_code=403, detail="Cannot send message. Connection is blocked.")
+        connection = conn_result.scalars().first()
+        if not connection:
+            raise HTTPException(status_code=403, detail="You are not connected to this user.")
+            
+        if connection.status != "active":
+            raise HTTPException(status_code=403, detail="Cannot send message. Connection is blocked.")
 
     new_message = Message(
         sender_id=current_user.id,
@@ -89,5 +102,37 @@ async def send_message(msg_in: MessageCreate, db: AsyncSession = Depends(get_db)
     await manager.send_personal_message(msg_json, msg_in.receiver_id)
     if msg_in.receiver_id != current_user.id:
         await manager.send_personal_message(msg_json, current_user.id)
+        
+    if is_ai_message:
+        async def process_ai_reply(ai_user: User, human_user: User, user_text: str):
+            from app.services.ai_agent_service import generate_ai_response
+            from app.core.database import AsyncSessionLocal
+            
+            ai_reply_text = await generate_ai_response(ai_user.username, user_text)
+            
+            async with AsyncSessionLocal() as session:
+                ai_message = Message(
+                    sender_id=ai_user.id,
+                    receiver_id=human_user.id,
+                    message_text=ai_reply_text
+                )
+                session.add(ai_message)
+                await session.commit()
+                await session.refresh(ai_message)
+                
+                ai_msg_data = {
+                    "type": "new_message",
+                    "data": {
+                        "id": str(ai_message.id),
+                        "sender_id": str(ai_message.sender_id),
+                        "receiver_id": str(ai_message.receiver_id),
+                        "message_text": ai_message.message_text,
+                        "created_at": ai_message.created_at.isoformat()
+                    }
+                }
+                ai_msg_json = json.dumps(ai_msg_data)
+                await manager.send_personal_message(ai_msg_json, human_user.id)
+                
+        background_tasks.add_task(process_ai_reply, receiver, current_user, msg_in.message_text)
     
     return new_message
