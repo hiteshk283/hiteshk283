@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ApiClient {
+  //static const String baseUrl = 'http://127.0.0.1:8000'; 
   static const String baseUrl = 'https://d1w8csqzvughb4.cloudfront.net'; // CloudFront CDN URL
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 

@@ -4,10 +4,11 @@ from datetime import datetime
 from typing import Optional
 
 class UserBase(BaseModel):
-    email: EmailStr
+    email: str
     username: str
 
 class UserCreate(UserBase):
+    email: EmailStr
     password: str = Field(..., min_length=8)
     link_code: Optional[str] = None
 
