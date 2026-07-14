@@ -3,8 +3,9 @@ class User {
   final String email;
   final String username;
   final bool isAi;
+  final bool isAdmin;
 
-  User({required this.id, required this.email, required this.username, this.isAi = false});
+  User({required this.id, required this.email, required this.username, this.isAi = false, this.isAdmin = false});
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
@@ -12,6 +13,7 @@ class User {
       email: json['email'],
       username: json['username'],
       isAi: json['is_ai'] ?? false,
+      isAdmin: json['is_admin'] ?? false,
     );
   }
 }

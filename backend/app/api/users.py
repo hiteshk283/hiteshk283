@@ -55,6 +55,10 @@ async def get_users(db: AsyncSession = Depends(get_db), current_user: User = Dep
     
     return users
 
+@router.get("/me", response_model=UserResponse)
+async def get_my_profile(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return current_user
+
 @router.delete("/me", status_code=status.HTTP_200_OK)
 async def delete_my_account(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     # Soft delete: Set is_active = False and anonymize

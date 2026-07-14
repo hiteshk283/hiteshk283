@@ -1,10 +1,47 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-class HomeScreen extends StatelessWidget {
+import 'package:provider/provider.dart';
+import '../providers/chat_provider.dart';
+import '../../data/models.dart';
+
+class HomeScreen extends StatefulWidget {
   final Widget child;
 
   const HomeScreen({super.key, required this.child});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ChatProvider>().onNewMessageReceived = _handleNewMessage;
+    });
+  }
+
+  void _handleNewMessage(Message msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('New message received!'),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+        action: SnackBarAction(
+          label: 'View',
+          onPressed: () {
+            if (msg.senderId != null) {
+              context.go('/chat/${msg.senderId}');
+            }
+          },
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,7 +53,7 @@ class HomeScreen extends StatelessWidget {
     if (location.startsWith('/settings')) currentIndex = 2;
 
     return Scaffold(
-      body: child,
+      body: widget.child,
       bottomNavigationBar: NavigationBar(
         selectedIndex: currentIndex,
         onDestinationSelected: (index) {

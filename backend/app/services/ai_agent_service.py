@@ -29,7 +29,7 @@ async def generate_ai_response(agent_username: str, user_message: str) -> str:
     
     try:
         response = await client.aio.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-1.5-flash",
             contents=user_message,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction
@@ -51,7 +51,7 @@ async def generate_ai_response_stream(agent_username: str, user_message: str):
     
     try:
         response_stream = await client.aio.models.generate_content_stream(
-            model="gemini-2.5-flash",
+            model="gemini-1.5-flash",
             contents=user_message,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction
