@@ -38,6 +38,29 @@ async def get_messages(
     # Reverse to chronological order
     return messages[::-1]
 
+@router.delete("/{receiver_id}", status_code=status.HTTP_200_OK)
+async def delete_chat_history(
+    receiver_id: UUID,
+    db: AsyncSession = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    from sqlalchemy import delete
+    # Delete all messages between current_user and receiver_id
+    query = delete(Message).where(
+        or_(
+            and_(Message.sender_id == current_user.id, Message.receiver_id == receiver_id),
+            and_(Message.sender_id == receiver_id, Message.receiver_id == current_user.id)
+        )
+    )
+    await db.execute(query)
+    
+    # Audit log
+    audit = AuditLog(user_id=current_user.id, action=f"deleted_chat_with_{receiver_id}")
+    db.add(audit)
+    
+    await db.commit()
+    return {"msg": "Chat history deleted"}
+
 @router.post("/", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
 async def send_message(
     msg_in: MessageCreate, 
@@ -55,22 +78,23 @@ async def send_message(
         
     is_ai_message = getattr(receiver, 'is_ai', False)
 
-    if not is_ai_message:
-        # Check if they are connected and not blocked
-        conn_result = await db.execute(
-            select(Connection).where(
-                or_(
-                    and_(Connection.user1_id == current_user.id, Connection.user2_id == msg_in.receiver_id),
-                    and_(Connection.user1_id == msg_in.receiver_id, Connection.user2_id == current_user.id)
-                )
+    # Check connection status
+    conn_result = await db.execute(
+        select(Connection).where(
+            or_(
+                and_(Connection.user1_id == current_user.id, Connection.user2_id == msg_in.receiver_id),
+                and_(Connection.user1_id == msg_in.receiver_id, Connection.user2_id == current_user.id)
             )
         )
-        connection = conn_result.scalars().first()
+    )
+    connection = conn_result.scalars().first()
+
+    if not is_ai_message:
         if not connection:
             raise HTTPException(status_code=403, detail="You are not connected to this user.")
             
-        if connection.status != "active":
-            raise HTTPException(status_code=403, detail="Cannot send message. Connection is blocked.")
+    if connection and connection.status != "active":
+        raise HTTPException(status_code=403, detail="Cannot send message. Connection is blocked.")
 
     new_message = Message(
         sender_id=current_user.id,

@@ -30,6 +30,27 @@ class ChatProvider with ChangeNotifier {
     fetchMessages();
   }
 
+  void clearCurrentChatContext() {
+    _currentReceiverId = null;
+    _isTyping = false;
+  }
+
+  Future<bool> clearChat(String receiverId) async {
+    try {
+      final response = await _apiClient.delete('/api/messages/$receiverId');
+      if (response.statusCode == 200) {
+        if (_currentReceiverId == receiverId) {
+          _messages.clear();
+          notifyListeners();
+        }
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
   void _initWsListener() {
     _wsClient.messages.listen((data) {
       try {

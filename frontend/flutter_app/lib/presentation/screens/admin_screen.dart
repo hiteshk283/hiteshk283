@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import '../../core/api_client.dart';
 import '../../data/models.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/animated_gradient_bg.dart';
+import '../widgets/glass_container.dart';
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
@@ -88,40 +90,60 @@ class _AdminScreenState extends State<AdminScreen> {
   @override
   Widget build(BuildContext context) {
     if (!context.watch<AuthProvider>().isAdmin) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Admin Dashboard')),
-        body: const Center(child: Text('Unauthorized')),
+      return AnimatedGradientBg(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(title: const Text('Admin Dashboard')),
+          body: const Center(child: Text('Unauthorized', style: TextStyle(color: Colors.white, fontSize: 18))),
+        ),
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Admin Dashboard'),
-        actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _fetchUsers),
-        ],
+    return AnimatedGradientBg(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: const Text('Admin Dashboard'),
+          actions: [
+            IconButton(icon: const Icon(Icons.refresh, color: Color(0xFF00FFC2)), onPressed: _fetchUsers),
+          ],
+        ),
+        body: _isLoading 
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFFFF2A5F)))
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _users.length,
+              itemBuilder: (context, index) {
+                final user = _users[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12.0),
+                  child: GlassContainer(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+                    child: ListTile(
+                      leading: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: user.isAi
+                              ? const LinearGradient(colors: [Color(0xFF00FFC2), Color(0xFF0080FF)])
+                              : const LinearGradient(colors: [Colors.grey, Colors.blueGrey]),
+                        ),
+                        child: Icon(user.isAi ? Icons.smart_toy : Icons.person, color: Colors.white),
+                      ),
+                      title: Text(user.username, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                      subtitle: Text('${user.email}\nID: ${user.id}', style: const TextStyle(color: Colors.white70)),
+                      isThreeLine: true,
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.redAccent),
+                        onPressed: () => _deleteUser(user.id, user.username),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
       ),
-      body: _isLoading 
-        ? const Center(child: CircularProgressIndicator())
-        : ListView.builder(
-            itemCount: _users.length,
-            itemBuilder: (context, index) {
-              final user = _users[index];
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: user.isAi ? Colors.purple : Colors.grey[800],
-                  child: Icon(user.isAi ? Icons.smart_toy : Icons.person, color: Colors.white),
-                ),
-                title: Text(user.username),
-                subtitle: Text('${user.email}\nID: ${user.id}'),
-                isThreeLine: true,
-                trailing: IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  onPressed: () => _deleteUser(user.id, user.username),
-                ),
-              );
-            },
-          ),
     );
   }
 }
