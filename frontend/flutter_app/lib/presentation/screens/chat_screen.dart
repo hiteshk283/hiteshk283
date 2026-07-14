@@ -210,22 +210,22 @@ class _ChatScreenState extends State<ChatScreen> {
                           child: isMe
                               ? Container(
                                   padding: const EdgeInsets.all(16),
-                                  decoration: const BoxDecoration(
-                                    gradient: LinearGradient(
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
                                       colors: [Color(0xFFFF2A5F), Color(0xFFFF8000)],
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
                                     ),
-                                    borderRadius: BorderRadius.only(
+                                    borderRadius: const BorderRadius.only(
                                       topLeft: Radius.circular(20),
                                       topRight: Radius.circular(20),
                                       bottomLeft: Radius.circular(20),
                                     ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Color(0xFFFF2A5F).withOpacity(0.3),
+                                        color: const Color(0xFFFF2A5F).withOpacity(0.3),
                                         blurRadius: 8,
-                                        offset: Offset(0, 4),
+                                        offset: const Offset(0, 4),
                                       )
                                     ],
                                   ),
