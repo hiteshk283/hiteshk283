@@ -15,6 +15,7 @@ import 'presentation/screens/user_list_screen.dart';
 import 'presentation/screens/chat_screen.dart';
 import 'presentation/screens/notification_screen.dart';
 import 'presentation/screens/settings_screen.dart';
+import 'presentation/screens/admin_screen.dart';
 
 void main() {
   runApp(const ControlCenterApp());
@@ -101,6 +102,10 @@ class _ControlCenterAppState extends State<ControlCenterApp> {
                   GoRoute(
                     path: '/settings',
                     builder: (context, state) => const SettingsScreen(),
+                  ),
+                  GoRoute(
+                    path: '/admin',
+                    builder: (context, state) => const AdminScreen(),
                   ),
                 ],
               ),

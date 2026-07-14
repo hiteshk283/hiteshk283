@@ -19,6 +19,16 @@ class SettingsScreen extends StatelessWidget {
             subtitle: Text('Manage your details'),
           ),
           const Divider(),
+          if (context.watch<AuthProvider>().isAdmin)
+            ListTile(
+              leading: const Icon(Icons.admin_panel_settings, color: Colors.blue),
+              title: const Text('Admin Dashboard', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+              onTap: () {
+                context.push('/admin');
+              },
+            ),
+          if (context.watch<AuthProvider>().isAdmin)
+            const Divider(),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.orange),
             title: const Text('Logout', style: TextStyle(color: Colors.orange)),

@@ -16,13 +16,17 @@ class ChatProvider with ChangeNotifier {
   }
 
   String? _currentReceiverId;
+  bool _isTyping = false;
+  Function(Message)? onNewMessageReceived;
 
   List<Message> get messages => _messages;
   bool get isLoading => _isLoading;
+  bool get isTyping => _isTyping;
   String? get currentReceiverId => _currentReceiverId;
 
   void setCurrentChatContext(String? receiverId) {
     _currentReceiverId = receiverId;
+    _isTyping = false;
     fetchMessages();
   }
 
@@ -51,8 +55,16 @@ class ChatProvider with ChangeNotifier {
               _messages[tempIndex] = newMsg; // Replace temp message with real one
             } else {
               _messages.insert(0, newMsg); // Add new message to top
+              if (onNewMessageReceived != null && newMsg.senderId != _currentReceiverId) {
+                 onNewMessageReceived!(newMsg); // trigger alert if it's from someone else
+              }
             }
+            _isTyping = false;
             notifyListeners();
+          } else {
+            if (onNewMessageReceived != null && newMsg.senderId != null) {
+              onNewMessageReceived!(newMsg); // trigger alert
+            }
           }
         } else if (decoded['type'] == 'message_chunk') {
           final chunkData = decoded['data'];
@@ -95,8 +107,18 @@ class ChatProvider with ChangeNotifier {
                 createdAt: DateTime.now(),
               );
               _messages.insert(0, newMsg);
+              if (onNewMessageReceived != null && newMsg.senderId != _currentReceiverId) {
+                onNewMessageReceived!(newMsg);
+              }
+            }
+            if (done) {
+               _isTyping = false;
+            } else {
+               _isTyping = false; // as soon as chunks arrive, they are no longer "typing" but responding
             }
             notifyListeners();
+          } else {
+             // Handle chunks for other chats (could alert here too if needed)
           }
         }
       } catch (e) {
@@ -152,13 +174,17 @@ class ChatProvider with ChangeNotifier {
       if (response.statusCode != 201) {
          // Revert on failure
          _messages.removeWhere((m) => m.id == tempMsg.id);
+         _isTyping = false;
          notifyListeners();
          return false;
       }
+      _isTyping = true;
+      notifyListeners();
       return true;
     } catch (e) {
       // Revert on failure
       _messages.removeWhere((m) => m.id == tempMsg.id);
+      _isTyping = false;
       notifyListeners();
       return false;
     }
