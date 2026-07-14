@@ -28,6 +28,18 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  @override
+  void dispose() {
+    _textController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void deactivate() {
+    context.read<ChatProvider>().clearCurrentChatContext();
+    super.deactivate();
+  }
+
   void _send() {
     if (_textController.text.trim().isNotEmpty) {
       final text = _textController.text.trim();
@@ -44,7 +56,48 @@ class _ChatScreenState extends State<ChatScreen> {
     final authId = context.read<AuthProvider>().userId;
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.chatTitle)),
+      appBar: AppBar(
+        title: Text(widget.chatTitle),
+        actions: [
+          if (widget.receiverId != null)
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: Colors.red),
+              onPressed: () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Clear Chat'),
+                    content: const Text('Are you sure you want to delete all messages in this chat? This cannot be undone.'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Cancel'),
+                      ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('Clear', style: TextStyle(color: Colors.white)),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (confirm == true && context.mounted) {
+                  final success = await context.read<ChatProvider>().clearChat(widget.receiverId!);
+                  if (success && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Chat cleared successfully')),
+                    );
+                  } else if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Failed to clear chat')),
+                    );
+                  }
+                }
+              },
+            ),
+        ],
+      ),
       body: Column(
         children: [
           Expanded(
