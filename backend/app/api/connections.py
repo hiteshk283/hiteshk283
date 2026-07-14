@@ -95,12 +95,22 @@ async def block_user(user_id: UUID, db: AsyncSession = Depends(get_db), current_
     connection = result.scalars().first()
     
     if not connection:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found")
-        
-    if connection.user1_id == current_user.id:
-        connection.status = "blocked_by_user1"
+        # Check if user exists
+        target_user = await db.execute(select(User).where(User.id == user_id))
+        if not target_user.scalars().first():
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+            
+        connection = Connection(
+            user1_id=current_user.id,
+            user2_id=user_id,
+            status="blocked_by_user1"
+        )
+        db.add(connection)
     else:
-        connection.status = "blocked_by_user2"
+        if connection.user1_id == current_user.id:
+            connection.status = "blocked_by_user1"
+        else:
+            connection.status = "blocked_by_user2"
         
     audit = AuditLog(user_id=current_user.id, action="user_blocked", details={"blocked_user": str(user_id)})
     db.add(audit)

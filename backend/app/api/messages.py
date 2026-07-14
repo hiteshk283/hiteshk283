@@ -78,22 +78,23 @@ async def send_message(
         
     is_ai_message = getattr(receiver, 'is_ai', False)
 
-    if not is_ai_message:
-        # Check if they are connected and not blocked
-        conn_result = await db.execute(
-            select(Connection).where(
-                or_(
-                    and_(Connection.user1_id == current_user.id, Connection.user2_id == msg_in.receiver_id),
-                    and_(Connection.user1_id == msg_in.receiver_id, Connection.user2_id == current_user.id)
-                )
+    # Check connection status
+    conn_result = await db.execute(
+        select(Connection).where(
+            or_(
+                and_(Connection.user1_id == current_user.id, Connection.user2_id == msg_in.receiver_id),
+                and_(Connection.user1_id == msg_in.receiver_id, Connection.user2_id == current_user.id)
             )
         )
-        connection = conn_result.scalars().first()
+    )
+    connection = conn_result.scalars().first()
+
+    if not is_ai_message:
         if not connection:
             raise HTTPException(status_code=403, detail="You are not connected to this user.")
             
-        if connection.status != "active":
-            raise HTTPException(status_code=403, detail="Cannot send message. Connection is blocked.")
+    if connection and connection.status != "active":
+        raise HTTPException(status_code=403, detail="Cannot send message. Connection is blocked.")
 
     new_message = Message(
         sender_id=current_user.id,

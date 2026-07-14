@@ -5,6 +5,9 @@ import 'package:provider/provider.dart';
 import '../providers/chat_provider.dart';
 import '../../data/models.dart';
 
+import '../widgets/animated_gradient_bg.dart';
+import '../widgets/glass_container.dart';
+
 class HomeScreen extends StatefulWidget {
   final Widget child;
 
@@ -30,9 +33,12 @@ class _HomeScreenState extends State<HomeScreen> {
       SnackBar(
         content: Text('New message received!'),
         behavior: SnackBarBehavior.floating,
+        backgroundColor: const Color(0xFFFF2A5F).withOpacity(0.9),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         duration: const Duration(seconds: 2),
         action: SnackBarAction(
           label: 'View',
+          textColor: Colors.white,
           onPressed: () {
             if (msg.senderId != null) {
               context.go('/chat/${msg.senderId}');
@@ -45,35 +51,102 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Calculate current index based on route
     int currentIndex = 0;
     final location = GoRouterState.of(context).uri.path;
     if (location.startsWith('/chat')) currentIndex = 0;
     if (location.startsWith('/notifications')) currentIndex = 1;
     if (location.startsWith('/settings')) currentIndex = 2;
 
-    return Scaffold(
-      body: widget.child,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: currentIndex,
-        onDestinationSelected: (index) {
-          switch (index) {
-            case 0:
-              context.go('/chat');
-              break;
-            case 1:
-              context.go('/notifications');
-              break;
-            case 2:
-              context.go('/settings');
-              break;
-          }
-        },
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.chat_bubble_outline), selectedIcon: Icon(Icons.chat_bubble), label: 'Chat'),
-          NavigationDestination(icon: Icon(Icons.notifications_none), selectedIcon: Icon(Icons.notifications), label: 'Alerts'),
-          NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: 'Settings'),
-        ],
+    return AnimatedGradientBg(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        extendBody: true,
+        body: widget.child,
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.only(left: 24.0, right: 24.0, bottom: 16.0),
+            child: GlassContainer(
+              blur: 15.0,
+              opacity: 0.1,
+              borderRadius: BorderRadius.circular(30),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _NavBarItem(
+                    icon: Icons.chat_bubble_outline,
+                    activeIcon: Icons.chat_bubble,
+                    label: 'Chat',
+                    isSelected: currentIndex == 0,
+                    onTap: () => context.go('/chat'),
+                  ),
+                  _NavBarItem(
+                    icon: Icons.notifications_none,
+                    activeIcon: Icons.notifications,
+                    label: 'Alerts',
+                    isSelected: currentIndex == 1,
+                    onTap: () => context.go('/notifications'),
+                  ),
+                  _NavBarItem(
+                    icon: Icons.settings_outlined,
+                    activeIcon: Icons.settings,
+                    label: 'Settings',
+                    isSelected: currentIndex == 2,
+                    onTap: () => context.go('/settings'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NavBarItem extends StatelessWidget {
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _NavBarItem({
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isSelected ? const Color(0xFF00FFC2) : Colors.white54;
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white.withOpacity(0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(isSelected ? activeIcon : icon, color: color, size: 24),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
