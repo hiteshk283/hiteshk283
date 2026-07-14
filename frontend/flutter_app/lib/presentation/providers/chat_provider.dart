@@ -54,6 +54,50 @@ class ChatProvider with ChangeNotifier {
             }
             notifyListeners();
           }
+        } else if (decoded['type'] == 'message_chunk') {
+          final chunkData = decoded['data'];
+          final String msgId = chunkData['id'];
+          final String textChunk = chunkData['message_text'];
+          final bool done = chunkData['done'] ?? false;
+          
+          bool isForCurrentChat = false;
+          final String? senderId = chunkData['sender_id'];
+          final String? receiverId = chunkData['receiver_id'];
+          if (_currentReceiverId == null) {
+            if (receiverId == null) isForCurrentChat = true;
+          } else {
+            if (receiverId != null) {
+               if (senderId == _currentReceiverId || receiverId == _currentReceiverId) {
+                  isForCurrentChat = true;
+               }
+            }
+          }
+
+          if (isForCurrentChat) {
+            final existingIndex = _messages.indexWhere((m) => m.id == msgId);
+            if (existingIndex != -1) {
+              final currentMsg = _messages[existingIndex];
+              _messages[existingIndex] = Message(
+                id: currentMsg.id,
+                senderId: currentMsg.senderId,
+                receiverId: currentMsg.receiverId,
+                messageText: currentMsg.messageText + textChunk,
+                createdAt: done && chunkData['created_at'] != null 
+                    ? DateTime.parse(chunkData['created_at']) 
+                    : currentMsg.createdAt,
+              );
+            } else {
+              final newMsg = Message(
+                id: msgId,
+                senderId: senderId,
+                receiverId: receiverId,
+                messageText: textChunk,
+                createdAt: DateTime.now(),
+              );
+              _messages.insert(0, newMsg);
+            }
+            notifyListeners();
+          }
         }
       } catch (e) {
         // Handle parsing error

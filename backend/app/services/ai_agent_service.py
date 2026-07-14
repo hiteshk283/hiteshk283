@@ -39,3 +39,27 @@ async def generate_ai_response(agent_username: str, user_message: str) -> str:
     except Exception as e:
         logger.error(f"Error generating AI response: {e}")
         return "I'm sorry, my systems are currently experiencing an error and I cannot respond properly."
+
+
+async def generate_ai_response_stream(agent_username: str, user_message: str):
+    """Generate a streamed response using Gemini based on the agent's persona."""
+    if not settings.gemini_api_key or not client:
+        yield f"Hello! I am {agent_username}. My AI capabilities are currently offline because the GEMINI_API_KEY is missing."
+        return
+
+    system_instruction = AI_PERSONAS.get(agent_username, "You are a helpful AI assistant.")
+    
+    try:
+        response_stream = await client.aio.models.generate_content_stream(
+            model="gemini-2.5-flash",
+            contents=user_message,
+            config=types.GenerateContentConfig(
+                system_instruction=system_instruction
+            )
+        )
+        async for chunk in response_stream:
+            if chunk.text:
+                yield chunk.text
+    except Exception as e:
+        logger.error(f"Error generating AI response stream: {e}")
+        yield "I'm sorry, my systems are currently experiencing an error and I cannot respond properly."
