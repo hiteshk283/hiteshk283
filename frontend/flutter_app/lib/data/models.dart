@@ -2,14 +2,18 @@ class User {
   final String id;
   final String email;
   final String username;
+  final bool isAi;
+  final bool isAdmin;
 
-  User({required this.id, required this.email, required this.username});
+  User({required this.id, required this.email, required this.username, this.isAi = false, this.isAdmin = false});
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
       id: json['id'],
       email: json['email'],
       username: json['username'],
+      isAi: json['is_ai'] ?? false,
+      isAdmin: json['is_admin'] ?? false,
     );
   }
 }

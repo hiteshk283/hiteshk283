@@ -15,6 +15,7 @@ import 'presentation/screens/user_list_screen.dart';
 import 'presentation/screens/chat_screen.dart';
 import 'presentation/screens/notification_screen.dart';
 import 'presentation/screens/settings_screen.dart';
+import 'presentation/screens/admin_screen.dart';
 
 void main() {
   runApp(const ControlCenterApp());
@@ -102,6 +103,10 @@ class _ControlCenterAppState extends State<ControlCenterApp> {
                     path: '/settings',
                     builder: (context, state) => const SettingsScreen(),
                   ),
+                  GoRoute(
+                    path: '/admin',
+                    builder: (context, state) => const AdminScreen(),
+                  ),
                 ],
               ),
             ],
@@ -110,14 +115,16 @@ class _ControlCenterAppState extends State<ControlCenterApp> {
               final isAuthRoute = state.uri.path == '/login' || state.uri.path == '/register';
 
               if (!loggedIn && !isAuthRoute) return '/login';
-              if (loggedIn && isAuthRoute) return '/chat';
+              if (loggedIn && (isAuthRoute || state.uri.path == '/')) return '/chat';
               return null;
             },
           );
 
           return MaterialApp.router(
             title: 'Control Center',
-            theme: AppTheme.darkTheme,
+            theme: AppTheme.darkTheme, // Fallback if system is light mode
+            darkTheme: AppTheme.darkTheme,
+            themeMode: ThemeMode.dark, // Force dark mode
             routerConfig: router,
             debugShowCheckedModeBanner: false,
           );

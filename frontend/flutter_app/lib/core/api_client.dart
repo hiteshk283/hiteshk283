@@ -3,7 +3,8 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ApiClient {
-  static const String baseUrl = 'http://localhost:8000'; // For emulators use 10.0.2.2
+  //static const String baseUrl = 'http://127.0.0.1:8000'; 
+  static const String baseUrl = 'https://d1w8csqzvughb4.cloudfront.net'; // CloudFront CDN URL
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   Future<Map<String, String>> _getHeaders() async {
@@ -16,7 +17,13 @@ class ApiClient {
 
   Future<http.Response> get(String endpoint) async {
     final headers = await _getHeaders();
-    return await http.get(Uri.parse('$baseUrl$endpoint'), headers: headers);
+    
+    // Add a cache buster timestamp to prevent CloudFront from caching API responses
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final separator = endpoint.contains('?') ? '&' : '?';
+    final url = '$baseUrl$endpoint${separator}_t=$timestamp';
+    
+    return await http.get(Uri.parse(url), headers: headers);
   }
 
   Future<http.Response> post(String endpoint, Map<String, dynamic> body) async {
@@ -26,6 +33,11 @@ class ApiClient {
       headers: headers,
       body: jsonEncode(body),
     );
+  }
+  
+  Future<http.Response> delete(String endpoint) async {
+    final headers = await _getHeaders();
+    return await http.delete(Uri.parse('$baseUrl$endpoint'), headers: headers);
   }
   
   Future<http.Response> postForm(String endpoint, Map<String, String> body) async {

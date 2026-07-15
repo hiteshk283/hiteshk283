@@ -1,13 +1,15 @@
+# pyrefly: ignore [missing-import]
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     app_name: str = "Control Center"
     environment: str = "development"
-    database_url: str = "sqlite+aiosqlite:///./control_center.db"
+    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/control_center"
     jwt_secret_key: str = "REPLACE_WITH_SECRET"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
+    gemini_api_key: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding='utf-8')
 

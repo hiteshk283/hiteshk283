@@ -30,8 +30,12 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _send() {
     if (_textController.text.trim().isNotEmpty) {
-      context.read<ChatProvider>().sendMessage(_textController.text.trim());
-      _textController.clear();
+      final text = _textController.text.trim();
+      final authId = context.read<AuthProvider>().userId;
+      if (authId != null) {
+        context.read<ChatProvider>().sendOptimisticMessage(text, authId);
+        _textController.clear();
+      }
     }
   }
 
@@ -52,9 +56,40 @@ class _ChatScreenState extends State<ChatScreen> {
                 return ListView.builder(
                   reverse: true,
                   padding: const EdgeInsets.all(16),
-                  itemCount: chat.messages.length,
+                  itemCount: chat.messages.length + (chat.isTyping ? 1 : 0),
                   itemBuilder: (context, index) {
-                    final msg = chat.messages[index];
+                    if (chat.isTyping && index == 0) {
+                      return Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(16),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF2A2A2A),
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(16),
+                              topRight: Radius.circular(16),
+                              bottomRight: Radius.circular(16),
+                            ),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                              SizedBox(width: 8),
+                              Text("Typing...", style: TextStyle(color: Colors.grey)),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                    
+                    final msgIndex = chat.isTyping ? index - 1 : index;
+                    final msg = chat.messages[msgIndex];
                     final isMe = msg.senderId == authId;
                     return Align(
                       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,

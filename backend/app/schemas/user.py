@@ -4,15 +4,19 @@ from datetime import datetime
 from typing import Optional
 
 class UserBase(BaseModel):
-    email: EmailStr
+    email: str
     username: str
 
 class UserCreate(UserBase):
+    email: EmailStr
     password: str = Field(..., min_length=8)
+    link_code: Optional[str] = None
 
 class UserResponse(UserBase):
     id: UUID
     is_active: bool
+    is_ai: Optional[bool] = False
+    is_admin: Optional[bool] = False
     created_at: datetime
     updated_at: datetime
 

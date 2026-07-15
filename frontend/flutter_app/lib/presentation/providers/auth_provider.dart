@@ -11,6 +11,7 @@ class AuthProvider with ChangeNotifier {
   bool _isAuthenticated = false;
   bool _isLoading = true;
   String? _userId;
+  bool _isAdmin = false;
 
   AuthProvider(this._wsClient) {
     _checkAuth();
@@ -18,7 +19,18 @@ class AuthProvider with ChangeNotifier {
 
   bool get isAuthenticated => _isAuthenticated;
   bool get isLoading => _isLoading;
+  bool get isAdmin => _isAdmin;
   String? get userId => _userId;
+
+  Future<void> _fetchProfile() async {
+    try {
+      final response = await _apiClient.get('/api/users/me');
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        _isAdmin = data['is_admin'] ?? false;
+      }
+    } catch (_) {}
+  }
 
   Future<void> _checkAuth() async {
     const storage = FlutterSecureStorage();
@@ -29,6 +41,7 @@ class AuthProvider with ChangeNotifier {
         _isAuthenticated = true;
         Map<String, dynamic> decodedToken = JwtDecoder.decode(token);
         _userId = decodedToken['sub'];
+        await _fetchProfile();
         await _wsClient.connect();
       } else {
         // Attempt refresh or logout
@@ -54,6 +67,7 @@ class AuthProvider with ChangeNotifier {
         _userId = decodedToken['sub'];
         
         _isAuthenticated = true;
+        await _fetchProfile();
         notifyListeners();
         await _wsClient.connect();
         return true;
@@ -64,14 +78,31 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> register(String email, String username, String password) async {
+  Future<bool> register(String email, String username, String password, [String? linkCode]) async {
     try {
-      final response = await _apiClient.post('/auth/register', {
+      final body = {
         'email': email,
         'username': username,
         'password': password,
-      });
+      };
+      if (linkCode != null && linkCode.isNotEmpty) {
+        body['link_code'] = linkCode;
+      }
+      final response = await _apiClient.post('/auth/register', body);
       return response.statusCode == 201;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> deleteAccount() async {
+    try {
+      final response = await _apiClient.delete('/api/users/me');
+      if (response.statusCode == 200) {
+        await logout();
+        return true;
+      }
+      return false;
     } catch (e) {
       return false;
     }

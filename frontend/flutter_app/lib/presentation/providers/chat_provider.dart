@@ -16,13 +16,17 @@ class ChatProvider with ChangeNotifier {
   }
 
   String? _currentReceiverId;
+  bool _isTyping = false;
+  Function(Message)? onNewMessageReceived;
 
   List<Message> get messages => _messages;
   bool get isLoading => _isLoading;
+  bool get isTyping => _isTyping;
   String? get currentReceiverId => _currentReceiverId;
 
   void setCurrentChatContext(String? receiverId) {
     _currentReceiverId = receiverId;
+    _isTyping = false;
     fetchMessages();
   }
 
@@ -35,10 +39,8 @@ class ChatProvider with ChangeNotifier {
           
           bool isForCurrentChat = false;
           if (_currentReceiverId == null) {
-            // Global chat context
             if (newMsg.receiverId == null) isForCurrentChat = true;
           } else {
-            // Private chat context
             if (newMsg.receiverId != null) {
                if (newMsg.senderId == _currentReceiverId || newMsg.receiverId == _currentReceiverId) {
                   isForCurrentChat = true;
@@ -47,8 +49,76 @@ class ChatProvider with ChangeNotifier {
           }
 
           if (isForCurrentChat) {
-            _messages.insert(0, newMsg); // Add to top
+            // Deduplicate: Check if we have an optimistic message with same text
+            final tempIndex = _messages.indexWhere((m) => m.id.startsWith('temp_') && m.messageText == newMsg.messageText);
+            if (tempIndex != -1) {
+              _messages[tempIndex] = newMsg; // Replace temp message with real one
+            } else {
+              _messages.insert(0, newMsg); // Add new message to top
+              if (onNewMessageReceived != null && newMsg.senderId != _currentReceiverId) {
+                 onNewMessageReceived!(newMsg); // trigger alert if it's from someone else
+              }
+            }
+            _isTyping = false;
             notifyListeners();
+          } else {
+            if (onNewMessageReceived != null && newMsg.senderId != null) {
+              onNewMessageReceived!(newMsg); // trigger alert
+            }
+          }
+        } else if (decoded['type'] == 'message_chunk') {
+          final chunkData = decoded['data'];
+          final String msgId = chunkData['id'];
+          final String textChunk = chunkData['message_text'];
+          final bool done = chunkData['done'] ?? false;
+          
+          bool isForCurrentChat = false;
+          final String? senderId = chunkData['sender_id'];
+          final String? receiverId = chunkData['receiver_id'];
+          if (_currentReceiverId == null) {
+            if (receiverId == null) isForCurrentChat = true;
+          } else {
+            if (receiverId != null) {
+               if (senderId == _currentReceiverId || receiverId == _currentReceiverId) {
+                  isForCurrentChat = true;
+               }
+            }
+          }
+
+          if (isForCurrentChat) {
+            final existingIndex = _messages.indexWhere((m) => m.id == msgId);
+            if (existingIndex != -1) {
+              final currentMsg = _messages[existingIndex];
+              _messages[existingIndex] = Message(
+                id: currentMsg.id,
+                senderId: currentMsg.senderId,
+                receiverId: currentMsg.receiverId,
+                messageText: currentMsg.messageText + textChunk,
+                createdAt: done && chunkData['created_at'] != null 
+                    ? DateTime.parse(chunkData['created_at']) 
+                    : currentMsg.createdAt,
+              );
+            } else {
+              final newMsg = Message(
+                id: msgId,
+                senderId: senderId,
+                receiverId: receiverId,
+                messageText: textChunk,
+                createdAt: DateTime.now(),
+              );
+              _messages.insert(0, newMsg);
+              if (onNewMessageReceived != null && newMsg.senderId != _currentReceiverId) {
+                onNewMessageReceived!(newMsg);
+              }
+            }
+            if (done) {
+               _isTyping = false;
+            } else {
+               _isTyping = false; // as soon as chunks arrive, they are no longer "typing" but responding
+            }
+            notifyListeners();
+          } else {
+             // Handle chunks for other chats (could alert here too if needed)
           }
         }
       } catch (e) {
@@ -80,7 +150,19 @@ class ChatProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> sendMessage(String text) async {
+  Future<bool> sendOptimisticMessage(String text, String currentUserId) async {
+    // 1. Optimistic UI Update - show instantly!
+    final tempMsg = Message(
+      id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
+      senderId: currentUserId,
+      receiverId: _currentReceiverId,
+      messageText: text,
+      createdAt: DateTime.now(),
+    );
+    _messages.insert(0, tempMsg);
+    notifyListeners();
+
+    // 2. Send to backend
     try {
       final body = <String, dynamic>{
         'message_text': text,
@@ -89,8 +171,21 @@ class ChatProvider with ChangeNotifier {
         body['receiver_id'] = _currentReceiverId;
       }
       final response = await _apiClient.post('/api/messages/', body);
-      return response.statusCode == 201;
+      if (response.statusCode != 201) {
+         // Revert on failure
+         _messages.removeWhere((m) => m.id == tempMsg.id);
+         _isTyping = false;
+         notifyListeners();
+         return false;
+      }
+      _isTyping = true;
+      notifyListeners();
+      return true;
     } catch (e) {
+      // Revert on failure
+      _messages.removeWhere((m) => m.id == tempMsg.id);
+      _isTyping = false;
+      notifyListeners();
       return false;
     }
   }
