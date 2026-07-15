@@ -20,6 +20,14 @@ AI_PERSONAS = {
     "AI - DevOps & Cloud": "You are a DevOps and Cloud Infrastructure Architect. You are an expert in AWS, Docker, Kubernetes, CI/CD pipelines, and infrastructure as code. Focus on scalable, highly available architectures."
 }
 
+# The auto-fallback list. If a model hits a 429 (Quota) or 503 (Overloaded) error, 
+# it will instantly jump to the next model without crashing.
+MODELS_TO_TRY = [
+    "gemini-3.5-flash", 
+    "gemini-2.5-flash", 
+    "gemini-flash-latest"
+]
+
 async def generate_ai_response(agent_username: str, user_message: str) -> str:
     """Generate a response using Gemini based on the agent's persona."""
     if not settings.gemini_api_key or not client:
@@ -27,18 +35,22 @@ async def generate_ai_response(agent_username: str, user_message: str) -> str:
 
     system_instruction = AI_PERSONAS.get(agent_username, "You are a helpful AI assistant.")
     
-    try:
-        response = await client.aio.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=user_message,
-            config=types.GenerateContentConfig(
-                system_instruction=system_instruction
+    for model_name in MODELS_TO_TRY:
+        try:
+            response = await client.aio.models.generate_content(
+                model=model_name,
+                contents=user_message,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_instruction
+                )
             )
-        )
-        return response.text
-    except Exception as e:
-        logger.error(f"Error generating AI response: {e}")
-        return "I'm sorry, my systems are currently experiencing an error and I cannot respond properly."
+            return response.text
+        except Exception as e:
+            logger.warning(f"Model {model_name} failed: {e}. Trying next...")
+            continue
+            
+    logger.error("All AI models failed.")
+    return "I'm sorry, my systems are currently experiencing an error and I cannot respond properly."
 
 
 async def generate_ai_response_stream(agent_username: str, user_message: str):
@@ -49,17 +61,30 @@ async def generate_ai_response_stream(agent_username: str, user_message: str):
 
     system_instruction = AI_PERSONAS.get(agent_username, "You are a helpful AI assistant.")
     
-    try:
-        response_stream = await client.aio.models.generate_content_stream(
-            model="gemini-2.0-flash",
-            contents=user_message,
-            config=types.GenerateContentConfig(
-                system_instruction=system_instruction
+    for model_name in MODELS_TO_TRY:
+        try:
+            response_stream = await client.aio.models.generate_content_stream(
+                model=model_name,
+                contents=user_message,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_instruction
+                )
             )
-        )
-        async for chunk in response_stream:
-            if chunk.text:
-                yield chunk.text
-    except Exception as e:
-        logger.error(f"Error generating AI response stream: {e}")
-        yield "I'm sorry, my systems are currently experiencing an error and I cannot respond properly."
+            
+            # Test if stream works by attempting to get the first chunk
+            # If it fails, it will raise an exception and fall back to the next model
+            first_chunk_received = False
+            async for chunk in response_stream:
+                first_chunk_received = True
+                if chunk.text:
+                    yield chunk.text
+                    
+            if first_chunk_received:
+                return # Successfully streamed, exit the function
+                
+        except Exception as e:
+            logger.warning(f"Model {model_name} stream failed: {e}. Trying next...")
+            continue
+            
+    logger.error("All AI models failed to stream.")
+    yield "I'm sorry, my systems are currently experiencing an error and I cannot respond properly."
