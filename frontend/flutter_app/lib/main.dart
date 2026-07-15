@@ -122,7 +122,9 @@ class _ControlCenterAppState extends State<ControlCenterApp> {
 
           return MaterialApp.router(
             title: 'Control Center',
-            theme: AppTheme.darkTheme,
+            theme: AppTheme.darkTheme, // Fallback if system is light mode
+            darkTheme: AppTheme.darkTheme,
+            themeMode: ThemeMode.dark, // Force dark mode
             routerConfig: router,
             debugShowCheckedModeBanner: false,
           );
